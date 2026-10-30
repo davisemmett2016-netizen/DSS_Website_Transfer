@@ -117,7 +117,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
     const ok = await sendEmail(env, {
       to: env.MAIL_TO || 'contact@davissouthernseptic.com',
       subject, html: body,
-      replyTo: f.email ? `${`${f.first} ${f.last}`.trim()} <${f.email}>` : undefined,
+      replyTo: f.email && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(f.email) ? f.email : undefined,
     });
     delivered = delivered || ok;
 

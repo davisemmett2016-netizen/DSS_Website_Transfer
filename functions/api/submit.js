@@ -40,7 +40,13 @@ async function sendEmail(env, { to, subject, html, replyTo }) {
       ...(replyTo ? { reply_to: replyTo } : {}),
     }),
   });
-  return res.ok;
+  if (!res.ok) {
+    let detail = '';
+    try { detail = await res.text(); } catch (e) {}
+    console.log('Resend error', res.status, detail);
+    return { ok: false, status: res.status, detail: detail.slice(0, 300) };
+  }
+  return { ok: true };
 }
 
 export async function onRequestPost({ request, env, waitUntil }) {
@@ -112,6 +118,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   }
 
   let delivered = false;
+  let lastErr = '';
 
   if (canEmail) {
     const ok = await sendEmail(env, {
@@ -119,10 +126,11 @@ export async function onRequestPost({ request, env, waitUntil }) {
       subject, html: body,
       replyTo: f.email && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(f.email) ? f.email : undefined,
     });
-    delivered = delivered || ok;
+    delivered = delivered || ok.ok;
+    if (!ok.ok) lastErr = `Resend ${ok.status}: ${ok.detail}`;
 
     // Confirmation to the customer (step 1, only if they gave an email)
-    if (ok && f.email && f.step === '1') {
+    if (ok.ok && f.email && f.step === '1') {
       const cb = `<h2>Thank You${f.first ? ', ' + esc(f.first) : ''}!</h2>` +
         '<p>We received your request and will reach out shortly.</p>' +
         (f.service ? `<p><strong>Service:</strong> ${esc(f.service)}</p>` : '') +
@@ -153,7 +161,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
   }
 
   if (!delivered) {
-    return json({ success: false, data: { message: `Delivery failed. Please call ${PHONE}.` } }, 502);
+    return json({ success: false, data: { message: `Delivery failed (${lastErr || 'no detail'}). Please call ${PHONE}.` } }, 200);
   }
   return json({ success: true, data: { message: 'Request received!', name: f.first } });
 }

@@ -75,7 +75,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
 
   const f = {
     first: get('first_name'), last: get('last_name'), phone: get('phone'), email: get('email'),
-    service: get('service'), address: get('address'), zip: get('zip'), message: get('message'),
+    service: get('service'), consent: get('sms_consent') === 'yes' ? 'Yes' : 'No', address: get('address'), zip: get('zip'), message: get('message'),
     step: get('dss_step') || '1',
     cName: get('customer_name'), cPhone: get('customer_phone'), cService: get('customer_service'),
   };
@@ -105,6 +105,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
       row('Phone', `<a href="tel:${esc(f.phone.replace(/\D/g, ''))}">${esc(f.phone)}</a>`) +
       (f.email ? row('Email', esc(f.email)) : '') +
       (f.service ? row('Service', esc(f.service)) : '') +
+      row('SMS consent', esc(f.consent)) +
       (f.address ? row('Address', esc(f.address)) : '') +
       (f.message ? row('Notes', nl2br(f.message), true) : '') +
       '</table>';
@@ -152,7 +153,7 @@ export async function onRequestPost({ request, env, waitUntil }) {
         body: JSON.stringify({
           source: 'website', step: f.step, submitted_at: new Date().toISOString(),
           first_name: f.first, last_name: f.last, phone: f.phone, email: f.email,
-          service: f.service, address: f.address, zip: f.zip, message: f.message,
+          service: f.service, sms_consent: f.consent === 'Yes', address: f.address, zip: f.zip, message: f.message,
           step1_name: f.cName, step1_phone: f.cPhone, step1_service: f.cService,
         }),
       });
